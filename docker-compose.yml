@@ -1,0 +1,80 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HOSTNAME: localhost
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+    command: start-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mcp-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-mcp-db.sql:/docker-entrypoint-initdb.d/02-mcp-data.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mcp-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mcp-net
+
+  mcp-server:
+    build: ./server
+    container_name: mcp-server
+    environment:
+      PORT: 3000
+      LOG_LEVEL: info
+      AUTH_SERVER_URL: http://keycloak:8080/realms/finance
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://keycloak:keycloak@postgres:5432/mcp_data
+      NSE_API_KEY: ${NSE_API_KEY:-}
+      ALPHA_VANTAGE_KEY: ${ALPHA_VANTAGE_KEY:-}
+      FINNHUB_KEY: ${FINNHUB_KEY:-}
+      NEWSAPI_KEY: ${NEWSAPI_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - mcp-net
+
+volumes:
+  postgres_data:
+
+networks:
+  mcp-net:
+    driver: bridge
