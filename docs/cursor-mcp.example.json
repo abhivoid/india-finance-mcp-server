@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "india-finance-mcp": {
+      "url": "http://localhost:3000/mcp",
+      "auth": {
+        "type": "oauth2",
+        "clientId": "mcp-client",
+        "authorizationUrl": "http://localhost:8080/realms/finance/protocol/openid-connect/auth",
+        "tokenUrl": "http://localhost:8080/realms/finance/protocol/openid-connect/token",
+        "scopes": ["openid", "profile", "email"]
+      }
+    }
+  }
+}

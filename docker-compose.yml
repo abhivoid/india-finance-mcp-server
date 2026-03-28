@@ -52,10 +52,17 @@ services:
   mcp-server:
     build: ./server
     container_name: mcp-server
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       PORT: 3000
       LOG_LEVEL: info
-      AUTH_SERVER_URL: http://keycloak:8080/realms/finance
+      # Issuer in JWT (match Keycloak frontend URL / realm issuer)
+      AUTH_SERVER_URL: http://localhost:8080/realms/finance
+      # JWKS fetch from inside the Docker network
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/finance
+      PUBLIC_BASE_URL: http://localhost:3000
+      OAUTH_CLIENT_ID: mcp-client
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://keycloak:keycloak@postgres:5432/mcp_data
       NSE_API_KEY: ${NSE_API_KEY:-}
